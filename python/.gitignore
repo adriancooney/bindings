@@ -3,4 +3,4 @@ build/*
 uWebSockets
 dist/*
 uWebSockets.egg-info/*
-
+.vagrant/*

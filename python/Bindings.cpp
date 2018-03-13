@@ -4,6 +4,8 @@
 #include <cassert>
 #include <thread>
 
+#include <stdint.h> // NOTE: Must be stdint.h not cstdint
+// Include main uWebsockets
 #include "uWS.h"
 
 
@@ -46,18 +48,18 @@ class WebSocket
             this->hub = new uWS::Hub();
             this->ws = NULL;
             this->td = NULL;
-            hub->onConnection([this](uWS::WebSocket<isServer> *ws, uWS::HttpRequest req) {
+            hub->uWS::Group<isServer>::onConnection([this](uWS::WebSocket<isServer> *ws, uWS::HttpRequest req) {
                 debug("Connected!\n");
                 this->ws = ws;
                 this->on_open();
             });
             
-            hub->onMessage([this](uWS::WebSocket<isServer> *ws, char *message, size_t length, uWS::OpCode opCode) {
+            hub->uWS::Group<isServer>::onMessage([this](uWS::WebSocket<isServer> *ws, char *message, size_t length, uWS::OpCode opCode) {
                debug("Got message %s %d\n", message, length);
                this->on_message(message, length); 
             });
             
-            hub->onDisconnection([this](uWS::WebSocket<isServer> * ws, int code, char *message, size_t length) {
+            hub->uWS::Group<isServer>::onDisconnection([this](uWS::WebSocket<isServer> * ws, int code, char *message, size_t length) {
                 this->on_close(code, message, length);
             });
             
@@ -86,6 +88,7 @@ class WebSocket
              PyGILState_STATE gstate = PyGILState_Ensure();
              PyObject * result = PyObject_CallMethod((PyObject*)this, (char*)"on_message", (char*)"s#", message, length);
              PyGILState_Release(gstate);
+             return result;
         }
         
         /**
@@ -119,14 +122,14 @@ class WebSocket
         
         PyObject * on_open() {
             PyGILState_STATE gstate = PyGILState_Ensure();
-            PyObject * result = PyObject_CallMethod((PyObject*)this, (char*)"on_open", "");
+            PyObject * result = PyObject_CallMethod((PyObject*)this, (char*)"on_open", ""); // NOTE: Ignore the -Wwrite-strings warning
             PyGILState_Release(gstate);
             return result;
         }
         
         PyObject * on_close(int code, char * message, int length) {
             PyGILState_STATE gstate = PyGILState_Ensure();
-            PyObject * result = PyObject_CallMethod((PyObject*)this, (char*)"on_close", (char*)"ds#", code, message, length);
+            PyObject * result = PyObject_CallMethod((PyObject*)this, (char*)"on_close", (char*)"ds#", code, message, length); // NOTE: Ignore the -Wwrite-strings warning
             PyGILState_Release(gstate);
             return result;
         }
@@ -202,7 +205,7 @@ static PyObject * WebSocket_on_message(PyObject * self, PyObject * args) {
     if (!PyArg_ParseTuple(args, "s#", &message, &length)) {
         return NULL;
     }
-    ((WebSocket<isServer>*)(self))->on_message(message, length);
+    return ((WebSocket<isServer>*)(self))->on_message(message, length);
 }
 
 template <bool isServer>
@@ -288,16 +291,38 @@ static PyMethodDef uWebSockets_methods[] = {
 
 
 
+#if (PYTHON_FLAVOUR == 3)
+/**
+ * Module definition structure
+ * (Py_InitModule is Python2 only)
+ */
+static struct PyModuleDef uWebSockets_module_def = {
+    PyModuleDef_HEAD_INIT,
+    "uWebSockets", // name
+    "Python bindings for the uWebSockets library", // docstring
+    -1, // Keep state in globals
+    uWebSockets_methods //module methods
+};
+#endif
 
 /**
  * Module initialisation function 
  */
 PyMODINIT_FUNC
 inituWebSockets(void) {
-    PyObject * m;
-    m = Py_InitModule("uWebSockets", uWebSockets_methods);
+    PyObject * m = NULL;
+    #if (PYTHON_FLAVOUR == 3)
+        m = PyModule_Create(&uWebSockets_module_def); // Python3 way
+    #else
+        m = Py_InitModule("uWebSockets", uWebSockets_methods); // Python2 way
+    #endif
+    
     if (m == NULL) {
-        return;
+        #if (PYTHON_FLAVOUR == 3)
+            Py_RETURN_NONE;
+        #else
+            return;
+        #endif
     }
     
     uWebSockets_error = PyErr_NewException((char*)"uWebSockets.Error", NULL, NULL); 
@@ -305,10 +330,17 @@ inituWebSockets(void) {
     PyModule_AddObject(m, "Error", uWebSockets_error);
     if (PyType_Ready(&uWebSockets_WebSocketClientType) < 0) {
         fprintf(stderr, __FILE__":Failed to construct WebSocketClientType\n");
-        return;
+        #if (PYTHON_FLAVOUR == 3)
+            return m;
+        #else
+            return;
+        #endif
     }
     Py_INCREF(&uWebSockets_WebSocketClientType);
     PyModule_AddObject(m, "WebSocketClient", (PyObject*)&uWebSockets_WebSocketClientType);
     
     PyEval_InitThreads();
+    #if (PYTHON_FLAVOUR == 3)
+        return m;
+    #endif
 }
