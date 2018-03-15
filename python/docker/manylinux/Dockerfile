@@ -24,11 +24,12 @@ RUN curl https://codeload.github.com/bminor/glibc/tar.gz/glibc-2.10 -o glibc.tar
     tar -xvf glibc.tar.gz && \  
     (rm -rf /opt/rh/devtoolset-2/ && yum remove -y devtoolset-2-*) || true
 
-# Compile glibc
+# Compile glibc and extract object files
 RUN cd glibc-glibc-2.10/ && mkdir -p build && cd build && \
-    ../configure --prefix=/opt/glibc2.10 && \
+    ../configure --prefix=/opt/glibc2.10 --enable-shared && \
     make -j && \
-    make -j install
+    make -j install && \
+    cp libc_pic.a /opt/glibc2.10/lib/
 
 # Compile and install libuv
 RUN curl https://codeload.github.com/libuv/libuv/tar.gz/v1.10.2 -o libuv.tar.gz && \
@@ -56,9 +57,12 @@ RUN curl https://codeload.github.com/openssl/openssl/tar.gz/OpenSSL_1_1_1-pre2 -
     make -j && \
     make -j install
     
-# Upgrade gcc and g++
+# Upgrade gcc and g++ but patch ld
 RUN curl https://people.centos.org/tru/devtools-2/devtools-2.repo -o /etc/yum.repos.d/devtools-2.repo && \
-    yum install -y devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++
+    yum install -y devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++ && \
+    mv /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld.old
+    
+ADD ld-hack.sh /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld
 
 RUN echo 'export MANYLINUX=yes' >> /etc/bashrc && \
     echo 'export CC=/opt/rh/devtoolset-2/root/usr/bin/gcc' >> /etc/bashrc && \

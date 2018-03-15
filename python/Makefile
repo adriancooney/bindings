@@ -11,13 +11,13 @@ PLATFORM := $(shell echo $(PLATFORM) | tr '[:upper:]' '[:lower:]')
 all : wheels
 
 ifeq ($(PLATFORM),windows)
-wheels :
+wheels : setup.py
 	cmd /c build-all-wheels.bat
 else
 SHELL := bash
-wheels :
+wheels : setup.py
 	bash build-all-wheels.sh
-sdist :
+sdist : setup.py
 	python2 setup.py sdist
 	python3 setup.py sdist
 	
@@ -67,3 +67,18 @@ vagrant/% : .vagrant
 all-vagrant :
 	export VAGRANT_HOST=devel && make vagrant/wheels
 	export VAGRANT_HOST=manylinux && make vagrant/wheels
+	
+ifeq ($(MANYLINUX),yes)
+ldd-manylinux : wheels
+	sudo /opt/python/cp27-cp27mu/bin/pip2 uninstall -y uWebSockets || true
+	sudo /opt/python/cp27-cp27mu/bin/pip2 install --no-index -f dist/ uWebSockets
+	ldd /opt/_internal/cpython-2.7.14-ucs4/lib/python2.7/site-packages/uWebSockets.so
+	
+manylinux.map : /glibc-glibc-2.10/build/libc.map Makefile
+	cat $(firstword $^) > $@
+
+setup.py : manylinux.map
+
+endif
+
+	

@@ -3,6 +3,7 @@ import shutil
 import sys
 import platform
 
+
 #from distutils.core import setup, Extension
 from setuptools import setup, Extension
 
@@ -14,25 +15,32 @@ upstream_src = [os.path.join(upstream_dir, f) for f in os.listdir(upstream_dir) 
 upstream_headers = [os.path.join(upstream_dir, f) for f in os.listdir(upstream_dir) if f.split(".")[-1] in ("hpp", "hxx", "h")]
 
 platform_libraries = [] #["ws2_32","mswsock","advapi32","iphlpapi","psapi","userenv"] if platform.system().lower() == "windows" else []
-
+platform_defines = []
+extra_objects = []
 if os.environ.get("MANYLINUX",None) is not None:
     # To satisfy manylinux1 tag, we need to jump through a lot of hoops; see docker/manylinux
-    platform_link_args = ["-lc", "-L/opt/openssl/lib", "-lssl", "-lcrypto"]
+    platform_link_args = ["-Wl,@manylinux-link"]
     platform_include_dirs = ["/opt/glibc2.10/include", "/opt/openssl/include/"]
     platform_cflags = ["-fPIC"]
+    platform_defines += [("MANYLINUX",1)]
+
+    
+
 else:
     platform_link_args = []
     platform_include_dirs = []
     platform_cflags = []
+    platform_libraries = ["ssl", "crypto", "z", "uv"]
 
 uWebSockets = Extension("uWebSockets", 
     sources=["Bindings.cpp"] + upstream_src,
     include_dirs=[upstream_dir] + platform_include_dirs,
-    libraries=["ssl","crypto","z","uv"] + platform_libraries,
+    libraries=platform_libraries,
     #define_macros=[("UWS_THREADSAFE", 1), ("PYTHON_FLAVOUR",sys.version_info[0])], ## FIXME: UWS_THREADSAFE unsupported on Windows and OSX
-    define_macros=[("PYTHON_FLAVOUR", sys.version_info[0]), ("__STDC_LIMIT_MACROS",1)],
+    define_macros=[("PYTHON_FLAVOUR", sys.version_info[0]), ("__STDC_LIMIT_MACROS",1)] + platform_defines,
     extra_compile_args=["-std=c++11"]+platform_cflags, # FIXME: Won't work on older compilers
-    extra_link_args=platform_link_args
+    extra_link_args=platform_link_args,
+    extra_objects = extra_objects
 )
 
 setup(name="uWebSockets",
