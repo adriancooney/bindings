@@ -34,8 +34,8 @@ upload :
 	done
 
 install :
-	pip2 install  --wheel-dir=dist uWebSockets
-	pip3 install  --wheel-dir=dist uWebSockets
+	if (which pip2); then pip2 install uWebSockets --no-index -f dist; fi
+	if (which pip3); then pip3 install uWebSockets --no-index -f dist; fi
 	if [[ -d /opt/python/*/bin ]]; then \
 		for PYBIN in /opt/python/*/bin; do \
 			"$${PYBIN}/pip" install uWebSockets --no-index -f dist; \
@@ -60,11 +60,6 @@ VAGRANT_HOST ?= manylinux
 	vagrant up $(VAGRANT_HOST)
 	touch $@
 
-glibc-patch :
-	git clone https://raw.githubusercontent.com/lattera/glibc/ glibc-patch
-	
-
-	
 vagrant/% : .vagrant
 	(vagrant status $(VAGRANT_HOST) | grep "$(VAGRANT_HOST)" | grep "running") || vagrant up $(VAGRANT_HOST)
 	vagrant ssh $(VAGRANT_HOST) -c 'cd /vagrant && make $(notdir $@)'

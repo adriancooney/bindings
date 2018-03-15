@@ -24,7 +24,7 @@ class TestClient(uWebSockets.WebSocketClient):
         super(TestClient, self).close()
         
 
-ws = TestClient("ws://localhost:3000")
+ws = TestClient("wss://websocket.edgeconn.com")
 ws.run(True)
 time.sleep(5)
 ws.close()
