@@ -9,7 +9,7 @@ This took a while to work out.
 
 Here's a brief description of issues with work arounds:
 
-1. `openssl-devel` provides openssl which results in undefined symbols
+1. `openssl-devel` provides ancient openssl which results in undefined symbols
  * We download a newer openssl source, BUT: this requires Perl 5.10.0 to configure...
  * We download Perl 5.12 source and compile it first, then we can use that perl to...
  * Compile openssl from source, so we can link dynamically. This gives us the symbols and `auditwheel` will work out the rest.
@@ -28,14 +28,28 @@ Here's a brief description of issues with work arounds:
 
 4. Centos/5 glibc doesn't contain `eventfd` but nothing newer is supported by `auditwheel`
  * We are restricted to GLIB 2.5 or earlier
- * But nobody says we can't link with a recompiled glibc...
+ * But nobody says we can't statically link with a newer glibc...
   * After reviewing commit history (and trying some versions), glibc 2.10 seems the safest
-  * Compile glibc 2.10 with the original (system default) gcc but the ABI restricted to GLIB 2.5
- * Fiddle with the linker options in `setup.py` so that the compiled glibc 2.10 is used as a *fall back*
-    Rename it libc210.so.1
-5. BONUS
- * If you try to compile glibc 2.10 statically instead of restricting the ABI, it won't work; you need to patch the Makeconfig
-   Basically from [this commit](https://sourceware.org/git/?p=glibc.git;a=blobdiff;f=Makeconfig;h=e96ebc7e96f17c6ee3965cb4aff16cd07afdacbc;hp=42b836ee1815d78eb8ff0d230b140f7da6da611c;hb=94b32c39127967ea58adac3d737a1e5d6116fb77;hpb=15055a1cd7e2c249093a5f6d57eca817767d8b85)
-    7 versions later...
-   
-6. Audit
+  * Compile glibc 2.10 with the original (system default) gcc
+
+5. Various Linker Hacks
+ * At this point we have three libc's on the system so understandably things get confusing
+ * (setup.py)[../../setup.py] uses environment variable `MANYLINUX` to set a bunch of hacks.
+ * (The linker wrapper script)[./ld-patch.sh] does more hacks
+  1. The devtools-2 compiler tries to use its own crtbegin/crtend/libc/libgcc so replace those with the system defaults
+     If this is not done, the library loads properly, but `auditwheel` detects external references to `GLIBC_PRIVATE`
+  2. Statically link to the devtools-2 version of libstd++
+  4. We need PIC glibc2.10 to statically link; fortunately this is an intermediate step so is left over in the build directory
+  5. PIC glibc2.10 leaves out a symbol which is in soinit.so, this is left in the build directory so pull it in
+  6. glibc2.10 causes multiple definitions from crti.o, so use the `-z muldefs` flag to discard repeated definitions (!!!!)
+  7. Due to our hack in 1. (or possibly 6 breaking something in crtend/crtn) we now get a segmentation fault on library _fini
+     So, in `Bindings.cpp` we have a `MANYLINUX` define (set from (setup.py)[../../setup.py]) and we override the default `_fini` with it.
+     * This `__wrap_fini` does absolutely nothing and no cleanup.
+       * This is probably bad and is probably going to cause kernel memory leaks or some bizarre bugs
+  8. Statically link libssl, lz, luv, etcetera.
+     Debatedly we shouldn't do this but in the spirit of `manylinux` "will work on any linux" we want it to run on linux without installing a bunch of development libraries.
+     Especially since I just pulled the newest available libssl due to security concerns with older versions
+  
+  
+ 
+

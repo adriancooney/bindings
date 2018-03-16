@@ -771,14 +771,14 @@ GLIBC_2.5 {
     splice; tee; vmsplice;
 } GLIBC_2.4;
 GLIBC_2.6 {
-  local:
+  global:
     __sched_cpucount;
     epoll_pwait; sync_file_range; sched_getcpu;
     strerror_l;
     utimensat; futimens;
 } GLIBC_2.5;
 GLIBC_2.7 {
-  local:
+  global:
     __fread_chk; __fread_unlocked_chk;
     __isoc99_scanf; __isoc99_vscanf; __isoc99_fscanf; __isoc99_vfscanf;
     __isoc99_sscanf; __isoc99_vsscanf;
@@ -790,19 +790,19 @@ GLIBC_2.7 {
     mkostemp; mkostemp64;
 } GLIBC_2.6;
 GLIBC_2.8 {
-  local:
+  global:
     __asprintf_chk; __vasprintf_chk; __dprintf_chk; __vdprintf_chk;
     __obstack_printf_chk; __obstack_vprintf_chk;
     qsort_r;
     timerfd_create; timerfd_settime; timerfd_gettime;
 } GLIBC_2.7;
 GLIBC_2.9 {
-  local:
+  global:
     dup3; pipe2;
     epoll_create1; inotify_init1;
 } GLIBC_2.8;
 GLIBC_2.10 {
-  local:
+  global:
     __posix_getopt;
     accept4;
     endsgent;
@@ -819,7 +819,7 @@ GLIBC_2.10 {
     sgetsgent; sgetsgent_r;
 } GLIBC_2.9;
 GLIBC_PRIVATE {
-  local:
+  global:
     __collate_element_hash; __collate_element_strings;
     __collate_symbol_classes; __collate_symbol_hash; __collate_symbol_strings;
     __fortify_fail;
@@ -855,8 +855,9 @@ GLIBC_PRIVATE {
     errno;
     h_errno; __resp;
 } GLIBC_2.10;
-
 UWS_0.14.6 {
-    global:
-        inituWebSockets;
+  global:
+  inituWebSockets;
+  PyInit_uWebSockets;
+  __wrap_atexit;
 };
