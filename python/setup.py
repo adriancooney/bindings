@@ -19,7 +19,32 @@ platform_defines = []
 extra_objects = []
 if os.environ.get("MANYLINUX",None) is not None:
     # To satisfy manylinux1 tag, we need to jump through a lot of hoops; see docker/manylinux
-    platform_link_args = ["-Wl,@manylinux-link"]
+    platform_link_args = [
+        "-Wl,--as-needed",
+        "-Wl,--demangle",
+        "-Wl,-Bstatic",
+        "-lc",
+        "/opt/rh/devtoolset-2/root/usr/lib/gcc/x86_64-CentOS-linux/4.8.2/libstdc++.a",
+        "-Wl,-Bdynamic",
+        "-lgcc",
+        "-lc",
+        "-Wl,-Bstatic",
+        "-lz",
+        "-luv",
+        "-L/opt/openssl/lib/",
+        "-lssl",
+        "-lcrypto",
+        "/glibc-glibc-2.10/build/elf/soinit.os",
+        "-Wl,-z,muldefs",
+        "-Wl,--gc-sections",
+        "/glibc-glibc-2.10/build/libc_pic.a",
+        "-Wl,--no-gc-sections",
+        "-Wl,--default-symver",
+        "-Wl,--version-script=/vagrant/manylinux.map",
+        "-Wl,-Bdynamic",
+        "-Wl,-Map=/vagrant/uWebSockets.map"
+        
+    ]
     platform_include_dirs = ["/opt/glibc2.10/include", "/opt/openssl/include/"]
     platform_cflags = ["-fPIC"]
     platform_defines += [("MANYLINUX",1)]

@@ -62,7 +62,8 @@ RUN curl https://people.centos.org/tru/devtools-2/devtools-2.repo -o /etc/yum.re
     yum install -y devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++ && \
     mv /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld.old
     
-ADD ld-hack.sh /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld
+ADD ld-patch.sh /opt/rh/devtoolset-2/root/usr/libexec/gcc/x86_64-CentOS-linux/4.8.2/ld
+ADD link-options /link-options
 
 RUN echo 'export MANYLINUX=yes' >> /etc/bashrc && \
     echo 'export CC=/opt/rh/devtoolset-2/root/usr/bin/gcc' >> /etc/bashrc && \

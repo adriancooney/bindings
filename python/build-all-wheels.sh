@@ -15,6 +15,7 @@ if [[ -d /opt/python/ ]]; then
         sudo "${PYBIN}/pip" uninstall -y uWebsockets || true
         sudo "${PYBIN}/pip" install --no-index -f prefixed/ uWebsockets
         "${PYBIN}/python" -c "import uWebSockets"
+        mkdir -p dist/
         mv prefixed/* dist/
         set +e
         
