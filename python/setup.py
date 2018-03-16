@@ -14,40 +14,51 @@ if not os.path.exists(upstream_dir):
 upstream_src = [os.path.join(upstream_dir, f) for f in os.listdir(upstream_dir) if f.split(".")[-1] in ("cpp", "cxx", "c")]
 upstream_headers = [os.path.join(upstream_dir, f) for f in os.listdir(upstream_dir) if f.split(".")[-1] in ("hpp", "hxx", "h")]
 
+if platform.system().lower() == "linux":
+    platform_defines = [("UWS_THREADSAFE", 1)] # FIXME: Does not work on Windoze
+else:
+    platform_defines = []
+
 platform_libraries = [] #["ws2_32","mswsock","advapi32","iphlpapi","psapi","userenv"] if platform.system().lower() == "windows" else []
-platform_defines = []
 extra_objects = []
 if os.environ.get("MANYLINUX",None) is not None:
     # To satisfy manylinux1 tag, we need to jump through a lot of hoops; see docker/manylinux
     platform_link_args = [
-        "-Wl,--as-needed",
+        # Don't link with standard library, the script in docker/manylinux/ld-patch.sh will add the correct flags for that.
+        "-nostdlib",
+        "-Wl,--add-needed",
         "-Wl,--demangle",
-        "-Wl,-Bstatic",
-        "-lc",
-        "/opt/rh/devtoolset-2/root/usr/lib/gcc/x86_64-CentOS-linux/4.8.2/libstdc++.a",
-        "-Wl,-Bdynamic",
-        "-lgcc",
-        "-lc",
         "-Wl,-Bstatic",
         "-lz",
         "-luv",
         "-L/opt/openssl/lib/",
         "-lssl",
         "-lcrypto",
+        
+        
         "/glibc-glibc-2.10/build/elf/soinit.os",
         "-Wl,-z,muldefs",
         "-Wl,--gc-sections",
+        "-Wl,-fini=__wrap_fini",
+        "-Wl,--wrap=atexit",
+        "-Wl,-z,initfirst",
         "/glibc-glibc-2.10/build/libc_pic.a",
         "-Wl,--no-gc-sections",
+        
         "-Wl,--default-symver",
         "-Wl,--version-script=/vagrant/manylinux.map",
-        "-Wl,-Bdynamic",
-        "-Wl,-Map=/vagrant/uWebSockets.map"
+        "-Wl,-Map=/vagrant/uWebSockets.map",
+        "-Wl,--cref",
         
+        "-Wl,-Bdynamic",
+
+        "/opt/rh/devtoolset-2/root/usr/lib/gcc/x86_64-CentOS-linux/4.8.2/libgcc_eh.a",
+        "/opt/rh/devtoolset-2/root/usr/lib/gcc/x86_64-CentOS-linux/4.8.2/libstdc++.a",        
+
     ]
     platform_include_dirs = ["/opt/glibc2.10/include", "/opt/openssl/include/"]
-    platform_cflags = ["-fPIC"]
-    platform_defines += [("MANYLINUX",1)]
+    platform_cflags = ["-fPIC", "-g", "-Og"]
+    platform_defines += [("MANYLINUX",1)] # ("DEBUG_PYTHON_BINDINGS", 1)]
 
     
 
@@ -69,7 +80,7 @@ uWebSockets = Extension("uWebSockets",
 )
 
 setup(name="uWebSockets",
-    version="0.14.6a1",
+    version="0.14.6a2",
     description="Python Bindings for the uWebSockets library",
     url="https://github.com/uNetworking/uWebSockets-bindings/",
     author="Sam Moore",
@@ -88,4 +99,6 @@ setup(name="uWebSockets",
     ], 
     keywords="websockets development",
     ext_modules =[uWebSockets],
+    test_suite='nose.collector',
+    tests_require=['nose']
 )

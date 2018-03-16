@@ -76,6 +76,7 @@ ldd-manylinux : wheels
 	
 manylinux.map : /glibc-glibc-2.10/build/libc.map Makefile
 	cat $(firstword $^) > $@
+	echo -e "UWS_0.14.6 {\n  global:\n  inituWebSockets;\n  PyInit_uWebSockets;\n};" >> $@
 
 setup.py : manylinux.map
 

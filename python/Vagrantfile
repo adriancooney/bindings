@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
         p.build_dir = "docker/manylinux"
         p.remains_running = true
         p.has_ssh = true
-        p.create_args = ["--cap-add SYS_PTRACE"]
+        p.create_args = ["--cap-add", "SYS_PTRACE"]
     end
   end
   
@@ -27,6 +27,7 @@ Vagrant.configure("2") do |config|
         p.build_dir = "docker/test"
         p.remains_running = true
         p.has_ssh = true
+        p.create_args = ["--cap-add", "SYS_PTRACE"]
     end
   end
   
