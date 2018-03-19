@@ -1,3 +1,5 @@
+* Get the headers for windows and instlal them in here. *
+
 == Sources for Windows 7 == 
  * Current as of 2018-03-18
  * From the future? Try https://archive.org/
@@ -16,3 +18,8 @@
  * .NET 4.0 - https://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe
  * Windows 7 SDK - https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/winsdk_web.exe
  * Visual C++ 2010 - http://download.microsoft.com/download/1/D/9/1D9A6C0E-FC89-43EE-9658-B9F0E3A76983/vc_web.exe
+
+
+=== OpenSSL ===
+ * 32 bit: http://slproweb.com/download/Win32OpenSSL-1_1_0g.exe
+ * 64 bit: http://slproweb.com/download/Win64OpenSSL-1_1_0g.exe

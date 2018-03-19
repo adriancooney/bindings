@@ -2,6 +2,8 @@ import os
 import shutil
 import sys
 import platform
+import ctypes
+arch = ctypes.sizeof(ctypes.c_voidp)
 
 
 #from distutils.core import setup, Extension
@@ -18,6 +20,22 @@ if platform.system().lower() == "linux":
     platform_defines = [("UWS_THREADSAFE", 1)] # FIXME: Does not work on Windoze
 else:
     platform_defines = []
+
+platform_include_dirs = []
+platform_link_args = []
+platform_cflags = []
+
+if platform.system().lower() == "windows":
+    platform_include_dirs += ["windows"]
+    if arch == 32:
+        platform_include_dirs += [os.path.join("C:","OpenSSL-Win32","include")]
+        platform_link_args = ["-L"+os.path.join("C:","OpenSSL-Win32","lib")]
+    else:
+        platform_include_dirs += [os.path.join("C:","OpenSSL-Win64","include")]
+        platform_link_args = ["-L"+os.path.join("C:","OpenSSL-Win64","lib")]
+    
+    platform_defines = [("_NO_THREADS",1)]
+    platform_cflags += ["--std=c++0x"]
 
 platform_libraries = [] #["ws2_32","mswsock","advapi32","iphlpapi","psapi","userenv"] if platform.system().lower() == "windows" else []
 extra_objects = []
@@ -63,9 +81,6 @@ if os.environ.get("MANYLINUX",None) is not None:
     
 
 else:
-    platform_link_args = []
-    platform_include_dirs = []
-    platform_cflags = []
     platform_libraries = ["ssl", "crypto", "z", "uv"]
 
 uWebSockets = Extension("uWebSockets", 

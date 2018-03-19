@@ -2,7 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
+#ifndef _NO_THREADS
 #include <thread>
+#endif //_NO_THREADS
 #include <vector>
 
 #include <stdint.h> // NOTE: Must be stdint.h not cstdint
@@ -155,11 +157,14 @@ class WebSocket
         
         PyObject * run(bool background) {
             debug("Called run %d\n", background);
+            #ifndef _NO_THREADS
             if (background) {
                 this->td = new thread([this]() {
                     this->hub->run();
                 });
-            } else {
+            } else 
+            #endif //_NO_THREADS
+            {
                 Py_BEGIN_ALLOW_THREADS
                 this->hub->run();
                 Py_END_ALLOW_THREADS
@@ -233,12 +238,14 @@ class WebSocket
             } else {
                 this->close_immediately = true;
             }
+            #ifndef _NO_THREADS
             if (this->td && this_thread::get_id() != this->td->get_id()) {
                 debug("Join thread\n");
                 thread * t = td;
                 this->td = NULL;
                 t->join();
             }
+            #endif
             PyGILState_Release(gstate);
             return this->check_error("close");
         }
@@ -255,7 +262,11 @@ class WebSocket
         uWS::WebSocket<isServer> * ws;
         // The Hub
         uWS::Hub * hub;
+        #ifndef _NO_THREADS
         thread * td;
+        #else
+        void * td;
+        #endif
         enum {
             INVALID=0,
             CONNECTING=1,

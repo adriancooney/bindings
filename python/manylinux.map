@@ -859,5 +859,4 @@ UWS_0.14.6 {
   global:
   inituWebSockets;
   PyInit_uWebSockets;
-  __wrap_atexit;
 };
