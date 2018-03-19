@@ -797,12 +797,12 @@ GLIBC_2.8 {
     timerfd_create; timerfd_settime; timerfd_gettime;
 } GLIBC_2.7;
 GLIBC_2.9 {
-  global:
+  local:
     dup3; pipe2;
     epoll_create1; inotify_init1;
 } GLIBC_2.8;
 GLIBC_2.10 {
-  global:
+  local:
     __posix_getopt;
     accept4;
     endsgent;
@@ -855,8 +855,10 @@ GLIBC_PRIVATE {
     errno;
     h_errno; __resp;
 } GLIBC_2.10;
+
 UWS_0.14.6 {
   global:
   inituWebSockets;
   PyInit_uWebSockets;
+  __wrap_atexit;
 };

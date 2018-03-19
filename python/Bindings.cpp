@@ -380,6 +380,8 @@ static PyMethodDef WebSocketClient_methods[] = {
     {NULL}
 };
 
+
+
 /**
  * Python Type Object for the WebSocket class
  */
@@ -494,33 +496,3 @@ inituWebSockets(void) {
         return m;
     #endif
 }
-
-// Define both PyInit_uWebSockets and inituWebSockets for compatibility 
-PyMODINIT_FUNC 
-PyInit_uWebSockets(void) {
-    debug("Called PyInit_uWebSockets\n");
-    #if (PYTHON_FLAVOUR == 3)
-        return inituWebSockets();
-    #else
-    inituWebSockets();
-    #endif
-}
-
-#ifdef MANYLINUX
-
-typedef void (*_exitfn)(void);
-static vector<_exitfn> _atexit = vector<_exitfn>();
-
-void __wrap__fini(void) {
-    //TODO: Remove this horrible hack
-    for (_exitfn & fn : _atexit) {
-        (*fn)();
-    }
-}
-
-extern "C" {
-    void __wrap_atexit(void(*function)(void)) {
-        _atexit.push_back(function);
-    }
-}
-#endif

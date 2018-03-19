@@ -81,6 +81,9 @@ if os.environ.get("MANYLINUX",None) is not None:
     
 
 else:
+    platform_link_args = []
+    platform_include_dirs = []
+    platform_cflags = []
     platform_libraries = ["ssl", "crypto", "z", "uv"]
 
 uWebSockets = Extension("uWebSockets", 
