@@ -1,4 +1,3 @@
-#include <Python.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
@@ -6,10 +5,20 @@
 #include <thread>
 #endif //_NO_THREADS
 #include <vector>
-
 #include <stdint.h> // NOTE: Must be stdint.h not cstdint
+
+// Fixes error with statically linked OpenSSL library
+#ifdef MSVC
+FILE _iob[] = {*stdin,*stdout,*stderr};
+extern "C" FILE * __cdecl __iob_func(void) {return _iob;}
+#endif
+
+#include <Python.h>
 // Include main uWebsockets
 #include "uWS.h"
+
+
+
 
 
 using namespace std;
@@ -21,7 +30,11 @@ using namespace std;
 #endif
 
 /** Common Exception class **/
+#ifndef MSVC
 static PyObject * uWebSockets_error __attribute__ ((unused));
+#else
+static PyObject * uWebSockets_error;
+#endif
 
 //TODO: Remove, testing bindings work
 static PyObject * uWebSockets_hello(PyObject * self, PyObject * args) {
@@ -252,7 +265,7 @@ class WebSocket
         
         PyObject * force_close() {
             this->close_immediately = true;
-            this->close();
+            return this->close();
         }
         
         PyObject_HEAD
@@ -496,3 +509,32 @@ inituWebSockets(void) {
         return m;
     #endif
 }
+
+// Define both PyInit_uWebSockets and inituWebSockets for compatibility 
+PyMODINIT_FUNC
+PyInit_uWebSockets(void) {
+    debug("Called PyInit_uWebSockets\n");
+    #if (PYTHON_FLAVOUR == 3)
+    return inituWebSockets();
+    #else
+    inituWebSockets();
+    #endif
+}
+
+#ifdef MANYLINUX
+typedef void (*_exitfn)(void);
+static vector<_exitfn> _atexit = vector<_exitfn>();
+
+void __wrap__fini(void) {
+    //TODO: Remove this horrible hack
+    for (_exitfn & fn : _atexit) {
+        (*fn)();
+    }
+}
+
+extern "C" {
+    void __wrap_atexit(void(*function)(void)) {
+        _atexit.push_back(function);
+    }
+}
+#endif

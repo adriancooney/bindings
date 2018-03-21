@@ -57,7 +57,7 @@ call "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\vcvarsall.bat"
 set CPATH=%PATH%
 set PATH=%ANACONDA_BASE%\%ENV27%;%ANACONDA_BASE%\%ENV27%\Scripts;%CPATH%
 
-echo "Python 2.7 32bit"
+::echo "Python 2.7 32bit"
 pip install wheel -q
 pip wheel --no-deps %PKG_REPO% --wheel-dir %WHEEL_DIR%
 
@@ -81,7 +81,7 @@ set ANACONDA_BASE64=C:\ProgramData\Anaconda3-64
 
 :: Python3 requires Visual Studio 2010 compiler present (Express version is fine)
 set PATH=%BASEPATH%
-call "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
 set CPATH=%PATH%
 
 :: Python3.6 32bit
@@ -89,12 +89,13 @@ set PATH=%ANACONDA_BASE%\%ENV36%;%ANACONDA_BASE%\%ENV36%\Scripts;%CPATH%
 echo "Python 3.6 32bit"
 pip install wheel -q
 pip wheel --no-deps %PKG_REPO% --wheel-dir %WHEEL_DIR%
+python %PKG_REPO%/setup.py fix-wheel
 
 :: Set 64-bit environment
 call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.Cmd" /Release /x64
 
 :: 64-bit cl.exe is here
-set CPATH=C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\x86_amd64;%CPATH%
+set CPATH=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64;%CPATH%
 
 :: Python3.6 64bit
 set PATH=%ANACONDA_BASE64%\%ENV36%;%ANACONDA_BASE64%\%ENV36%\Scripts;%CPATH%

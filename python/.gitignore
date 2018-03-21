@@ -7,3 +7,4 @@ uWebSockets.egg-info/*
 debug.ld
 manylinux.map
 uWebSockets.map
+windows/*.dll

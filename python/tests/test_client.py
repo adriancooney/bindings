@@ -61,7 +61,6 @@ while (not ws.valid() or ws.connected()) \
 
 print(json.dumps(ws.sent_received, indent=4))
 ws.close()
-
-
 assert(len(ws.sent_received) >= num_messages)
-
+## Required on Windoze
+sys.exit(0)
