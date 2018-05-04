@@ -35,7 +35,7 @@ if platform.system().lower() == "windows":
     platform_libraries = []
     platform_include_dirs += [os.path.join(os.path.dirname(__file__),"windows")]
     platform_include_dirs += [os.path.join("C:\\","Program Files (x86)", "libuv", "include")]
-    platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","Program Files (x86)", "libuv")]
+    
     platform_include_dirs += [os.path.join("C:\\", "zlib")]
     
     platform_libraries += ["legacy_stdio_definitions", "legacy_stdio_wide_specifiers"]
@@ -46,25 +46,42 @@ if platform.system().lower() == "windows":
     
     
     platform_libraries += ["zlibstat"]
-    platform_libraries += ["libssl32MT", "libcrypto32MT"]
+    
+    platform_package_data["uWebSockets"] += ["libuv.dll"]
     platform_libraries += ["libuv"]
     
-    _external_dlls = [os.path.join("C:\\", "Program Files (x86)","libuv", "libuv.dll")]
-    platform_package_data["uWebSockets"] += ["libuv.dll"]
     
     platform_link_args += ["/NODEFAULTLIB:libc"]
     if arch == 32:
         platform_include_dirs += [os.path.join("C:\\","OpenSSL-Win32","include")]
         platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","OpenSSL-Win32","lib", "VC", "static")]
         platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","zlib", "static32")]
+        platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","Program Files (x86)", "libuv")]
+        platform_libraries += ["libssl32MT", "libcrypto32MT"]
+        _external_dlls = [os.path.join("C:\\", "Program Files (x86)","libuv", "libuv.dll")]
+    
     elif arch == 64:
         platform_include_dirs += [os.path.join("C:\\","OpenSSL-Win64","include")]
         platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","OpenSSL-Win64","lib", "VC", "static")]
         platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","zlib", "static_x64")]
+        platform_link_args += ["/LIBPATH:"+os.path.join("C:\\","Program Files", "libuv")]
+        platform_libraries += ["libssl64MT", "libcrypto64MT"]
+        _external_dlls = [os.path.join("C:\\", "Program Files","libuv", "libuv.dll")]
+
+    
     else:
         raise Exception("Unknown architecture %s" % repr(arch))
     
     platform_defines = [("MSVC",1), ("_WIN32", 1), ("ZLIB_WINAPI",1)]
+    if sys.version_info[0] == 2:
+        platform_defines += [("_NO_THREADS",1)]
+    else:
+        """
+            We have to manually set these includes
+        """
+        platform_include_dirs += [os.path.join("C:\\","Program Files (x86)","Microsoft Visual Studio 14.0", "VC", "INCLUDE")]
+        platform_include_dirs += [os.path.join("C:\\","Program Files (x86)","Microsoft Visual Studio 14.0", "VC", "ATLMFC", "INCLUDE")]
+        platform_include_dirs += [os.path.join("C:\\","Program Files (x86)","Windows Kits", "10", "INCLUDE", "10.0.10240.0", "ucrt")]
     platform_cflags += ["--std=c++0x"]
 
 if os.environ.get("MANYLINUX",None) is not None:
@@ -125,7 +142,7 @@ version="0.14.8a1"
 Windoze Hack - Add dlls
 """
 if platform.system().lower() == "windows" and "fix-wheel" in sys.argv:
-    whl = os.path.join(os.path.dirname(__file__), "dist", "uWebSockets-%s-cp%d%d-cp%d%dm-win32.whl" % (version, sys.version_info[0],sys.version_info[1],sys.version_info[0],sys.version_info[1],))
+    whl = os.path.join(os.path.dirname(__file__), "dist", "uWebSockets-%s-cp%d%d-cp%d%dm-win%s.whl" % (version, sys.version_info[0],sys.version_info[1],sys.version_info[0],sys.version_info[1],"32" if arch==32 else "_amd64"))
     print("wheel in %s" % repr(whl))
     assert(os.path.exists(whl))
     import zipfile
