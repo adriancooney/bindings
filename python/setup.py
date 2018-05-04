@@ -119,7 +119,7 @@ uWebSockets = Extension("uWebSockets",
     extra_objects = extra_objects
 )
 
-version="0.14.6a2"
+version="0.14.8a1"
 
 """
 Windoze Hack - Add dlls
