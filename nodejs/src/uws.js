@@ -272,7 +272,7 @@ class WebSocket {
 
     ping(message, options, dontFailWhenClosed) {
         if (this.external) {
-            native.server.send(this.external, message, WebSocketClient.OPCODE_PING);
+            native.server.send(this.external, message, WebSocketClient.OPCODE_PING, false);
         }
     }
 
@@ -283,18 +283,18 @@ class WebSocket {
         }
     }
 
-    send(message, options, cb) {
+    send(message, options, cb, compress) {
         if (this.external) {
             if (typeof options === 'function') {
                 cb = options;
                 options = null;
             }
 
-            const binary = options && options.binary || typeof message !== 'string';
+            const binary = options && typeof options.binary === 'boolean' ? options.binary : typeof message !== 'string';
 
             native.server.send(this.external, message, binary ? WebSocketClient.OPCODE_BINARY : WebSocketClient.OPCODE_TEXT, cb ? (() => {
                 process.nextTick(cb);
-            }) : undefined);
+            }) : undefined, compress);
         } else if (cb) {
             cb(new Error('not opened'));
         }
@@ -318,7 +318,7 @@ class WebSocketClient extends WebSocket {
 
     ping(message, options, dontFailWhenClosed) {
         if (this.external) {
-            native.client.send(this.external, message, WebSocketClient.OPCODE_PING);
+            native.client.send(this.external, message, WebSocketClient.OPCODE_PING, false);
         }
     }
 
@@ -329,18 +329,18 @@ class WebSocketClient extends WebSocket {
         }
     }
 
-    send(message, options, cb) {
+    send(message, options, cb, compress) {
         if (this.external) {
             if (typeof options === 'function') {
                 cb = options;
                 options = null;
             }
 
-            const binary = options && options.binary || typeof message !== 'string';
+            const binary = options && typeof options.binary === 'boolean' ? options.binary : typeof message !== 'string';
 
             native.client.send(this.external, message, binary ? WebSocketClient.OPCODE_BINARY : WebSocketClient.OPCODE_TEXT, cb ? (() => {
                 process.nextTick(cb);
-            }) : undefined);
+            }) : undefined, compress);
         } else if (cb) {
             cb(new Error('not opened'));
         }
@@ -366,11 +366,12 @@ class Server extends EventEmitter {
             throw new TypeError('invalid options');
         }
 
-        var nativeOptions = WebSocketClient.PERMESSAGE_DEFLATE;
+        var nativeOptions = 0;
+        if (options.perMessageDeflate !== undefined && options.perMessageDeflate !== false) {
+            nativeOptions |= WebSocketClient.PERMESSAGE_DEFLATE;
 
-        if (options.perMessageDeflate !== undefined) {
-            if (options.perMessageDeflate === false) {
-                nativeOptions = 0;
+            if (options.perMessageDeflate.serverNoContextTakeover === false) {
+                nativeOptions |= WebSocketClient.SLIDING_DEFLATE_WINDOW;
             }
         }
 
@@ -550,8 +551,9 @@ class Server extends EventEmitter {
 }
 
 WebSocketClient.PERMESSAGE_DEFLATE = 1;
-WebSocketClient.SERVER_NO_CONTEXT_TAKEOVER = 2;
-WebSocketClient.CLIENT_NO_CONTEXT_TAKEOVER = 4;
+WebSocketClient.SLIDING_DEFLATE_WINDOW = 16;
+//WebSocketClient.SERVER_NO_CONTEXT_TAKEOVER = 2;
+//WebSocketClient.CLIENT_NO_CONTEXT_TAKEOVER = 4;
 WebSocketClient.OPCODE_TEXT = 1;
 WebSocketClient.OPCODE_BINARY = 2;
 WebSocketClient.OPCODE_PING = 9;
