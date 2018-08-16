@@ -3,6 +3,9 @@
 const http = require('http');
 const EventEmitter = require('events');
 const EE_ERROR = 'Registering more than one listener to a WebSocket is not supported.';
+const DEFAULT_PAYLOAD_LIMIT = 16777216;
+
+let _upgradeReq = null;
 
 function noop() {}
 
@@ -11,7 +14,7 @@ function abortConnection(socket, code, name) {
 }
 
 function emitConnection(ws) {
-    this.emit('connection', ws);
+    this.emit('connection', ws, _upgradeReq);
 }
 
 function onServerMessage(message, webSocket) {
@@ -42,9 +45,7 @@ const native = (() => {
 
 native.setNoop(noop);
 
-var _upgradeReq = null;
-
-const clientGroup = native.client.group.create();
+const clientGroup = native.client.group.create(0, DEFAULT_PAYLOAD_LIMIT);
 
 native.client.group.onConnection(clientGroup, (external) => {
     const webSocket = native.getUserData(external);
@@ -271,7 +272,7 @@ class WebSocket {
 
     ping(message, options, dontFailWhenClosed) {
         if (this.external) {
-            native.server.send(this.external, message, WebSocketClient.OPCODE_PING);
+            native.server.send(this.external, message, WebSocketClient.OPCODE_PING, false);
         }
     }
 
@@ -282,18 +283,18 @@ class WebSocket {
         }
     }
 
-    send(message, options, cb) {
+    send(message, options, cb, compress) {
         if (this.external) {
             if (typeof options === 'function') {
                 cb = options;
                 options = null;
             }
 
-            const binary = options && options.binary || typeof message !== 'string';
+            const binary = options && typeof options.binary === 'boolean' ? options.binary : typeof message !== 'string';
 
             native.server.send(this.external, message, binary ? WebSocketClient.OPCODE_BINARY : WebSocketClient.OPCODE_TEXT, cb ? (() => {
                 process.nextTick(cb);
-            }) : undefined);
+            }) : undefined, compress);
         } else if (cb) {
             cb(new Error('not opened'));
         }
@@ -317,7 +318,7 @@ class WebSocketClient extends WebSocket {
 
     ping(message, options, dontFailWhenClosed) {
         if (this.external) {
-            native.client.send(this.external, message, WebSocketClient.OPCODE_PING);
+            native.client.send(this.external, message, WebSocketClient.OPCODE_PING, false);
         }
     }
 
@@ -328,18 +329,18 @@ class WebSocketClient extends WebSocket {
         }
     }
 
-    send(message, options, cb) {
+    send(message, options, cb, compress) {
         if (this.external) {
             if (typeof options === 'function') {
                 cb = options;
                 options = null;
             }
 
-            const binary = options && options.binary || typeof message !== 'string';
+            const binary = options && typeof options.binary === 'boolean' ? options.binary : typeof message !== 'string';
 
             native.client.send(this.external, message, binary ? WebSocketClient.OPCODE_BINARY : WebSocketClient.OPCODE_TEXT, cb ? (() => {
                 process.nextTick(cb);
-            }) : undefined);
+            }) : undefined, compress);
         } else if (cb) {
             cb(new Error('not opened'));
         }
@@ -365,15 +366,16 @@ class Server extends EventEmitter {
             throw new TypeError('invalid options');
         }
 
-        var nativeOptions = WebSocketClient.PERMESSAGE_DEFLATE;
+        var nativeOptions = 0;
+        if (options.perMessageDeflate !== undefined && options.perMessageDeflate !== false) {
+            nativeOptions |= WebSocketClient.PERMESSAGE_DEFLATE;
 
-        if (options.perMessageDeflate !== undefined) {
-            if (options.perMessageDeflate === false) {
-                nativeOptions = 0;
+            if (options.perMessageDeflate.serverNoContextTakeover === false) {
+                nativeOptions |= WebSocketClient.SLIDING_DEFLATE_WINDOW;
             }
         }
 
-        this.serverGroup = native.server.group.create(nativeOptions, options.maxPayload === undefined ? 1048576 : options.maxPayload);
+        this.serverGroup = native.server.group.create(nativeOptions, options.maxPayload === undefined ? DEFAULT_PAYLOAD_LIMIT : options.maxPayload);
 
         // can these be made private?
         this._upgradeCallback = noop;
@@ -430,6 +432,10 @@ class Server extends EventEmitter {
                 if (eventName === 'upgrade') {
                     this._lastUpgradeListener = false;
                 }
+            });
+
+            this.httpServer.on('error', (err) => {
+                this.emit('error', err);
             });
         }
 
@@ -514,7 +520,7 @@ class Server extends EventEmitter {
         }
     }
 
-    close() {
+    close(cb) {
         if (this._upgradeListener && this.httpServer) {
             this.httpServer.removeListener('upgrade', this._upgradeListener);
 
@@ -526,6 +532,11 @@ class Server extends EventEmitter {
         if (this.serverGroup) {
             native.server.group.close(this.serverGroup);
             this.serverGroup = null;
+        }
+
+        if (typeof cb === 'function') {
+            // compatibility hack, 15 seconds timeout
+            setTimeout(cb, 20000);
         }
     }
 
@@ -540,8 +551,9 @@ class Server extends EventEmitter {
 }
 
 WebSocketClient.PERMESSAGE_DEFLATE = 1;
-WebSocketClient.SERVER_NO_CONTEXT_TAKEOVER = 2;
-WebSocketClient.CLIENT_NO_CONTEXT_TAKEOVER = 4;
+WebSocketClient.SLIDING_DEFLATE_WINDOW = 16;
+//WebSocketClient.SERVER_NO_CONTEXT_TAKEOVER = 2;
+//WebSocketClient.CLIENT_NO_CONTEXT_TAKEOVER = 4;
 WebSocketClient.OPCODE_TEXT = 1;
 WebSocketClient.OPCODE_BINARY = 2;
 WebSocketClient.OPCODE_PING = 9;
